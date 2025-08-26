@@ -1,0 +1,47 @@
+2025-04-01 13:23:40,751 - Successfully retrieved access token
+2025-04-01 13:23:40,842 - file_cache is only supported with oauth2client<4.0.0
+2025-04-01 13:23:40,880 - \u2705 Google Drive authentication successful.
+2025-04-01 13:23:40,887 - \u2705 BackupManager initialized successfully.
+2025-04-01 13:23:40,887 - \U0001f680 Backup service started, monitoring for changes...
+2025-04-01 13:24:30,949 - \U0001f4dd File modified: C:/Users/Lenovo/Desktop/Aksh1\ash.txt
+2025-04-01 13:24:31,007 - \U0001f4c4 Version saved: ash.txt_20250401_132430
+2025-04-01 13:24:36,990 - \u2705 Uploaded to Google Drive: ash.txt
+2025-04-01 13:24:41,369 - \U0001f4e9 Email sent: Backup done: ash.txt
+2025-04-01 13:25:21,002 - \U0001f4dd File modified: C:/Users/Lenovo/Desktop/Aksh1\ash.txt
+2025-04-01 13:25:21,014 - \U0001f4c4 Version saved: ash.txt_20250401_132521
+2025-04-01 13:25:25,445 - \u2705 Uploaded to Google Drive: ash.txt
+2025-04-01 13:25:34,844 - \U0001f4e9 Email sent: Backup done: ash.txt
+2025-04-01 13:27:16,992 - \U0001f6d1 Backup service stopped manually.
+2025-04-01 13:27:22,148 - file_cache is only supported with oauth2client<4.0.0
+2025-04-01 13:27:22,156 - \u2705 Google Drive authentication successful.
+2025-04-01 13:27:22,156 - \u2705 BackupManager initialized successfully.
+2025-04-01 13:27:22,159 - \U0001f680 Backup service started, monitoring for changes...
+2025-04-01 13:28:17,745 - \U0001f6d1 Backup service stopped manually.
+2025-04-01 13:28:20,684 - file_cache is only supported with oauth2client<4.0.0
+2025-04-01 13:28:20,692 - \u2705 Google Drive authentication successful.
+2025-04-01 13:28:20,692 - \u2705 BackupManager initialized successfully.
+2025-04-01 13:28:20,692 - \U0001f680 Backup service started, monitoring for changes...
+2025-04-01 13:29:54,610 - \U0001f6d1 Backup service stopped manually.
+2025-04-01 13:30:31,410 - Successfully retrieved access token
+2025-04-01 13:30:31,573 - file_cache is only supported with oauth2client<4.0.0
+2025-04-01 13:30:31,592 - \u2705 Google Drive authentication successful.
+2025-04-01 13:30:31,592 - \u2705 BackupManager initialized successfully.
+2025-04-01 13:30:31,595 - \U0001f680 Backup service started, monitoring for changes...
+2025-04-01 13:31:41,647 - \U0001f4dd File modified: C:/Users/Lenovo/Desktop/Aksh1\ash.txt
+2025-04-01 13:31:41,654 - \U0001f4c4 Version saved: ash.txt_20250401_133141
+2025-04-01 13:31:45,215 - \u2705 Uploaded to Google Drive: ash.txt
+2025-04-01 13:31:49,192 - \U0001f4e9 Email sent: Backup done: ash.txt
+2025-04-01 13:33:51,797 - \U0001f4dd File modified: C:/Users/Lenovo/Desktop/Aksh1\aksh_saraf.txt
+2025-04-01 13:33:51,827 - \U0001f4c4 Version saved: aksh_saraf.txt_20250401_133351
+2025-04-01 13:33:55,226 - \u2705 Uploaded to Google Drive: aksh_saraf.txt
+2025-04-01 13:34:00,835 - \U0001f4e9 Email sent: Backup done: aksh_saraf.txt
+2025-04-01 13:34:21,853 - \U0001f6d1 Backup service stopped manually.
+2025-04-01 13:34:25,305 - file_cache is only supported with oauth2client<4.0.0
+2025-04-01 13:34:25,310 - \u2705 Google Drive authentication successful.
+2025-04-01 13:34:25,311 - \u2705 BackupManager initialized successfully.
+2025-04-01 13:34:25,312 - \U0001f680 Backup service started, monitoring for changes...
+2025-04-01 13:36:55,427 - \U0001f4dd File modified: C:/Users/Lenovo/Desktop/Aksh1\aksh_saraf.txt
+2025-04-01 13:36:55,457 - \U0001f4c4 Version saved: aksh_saraf.txt_20250401_133655
+2025-04-01 13:37:00,136 - \u2705 Uploaded to Google Drive: aksh_saraf.txt
+2025-04-01 13:37:06,792 - \U0001f4e9 Email sent: Backup done: aksh_saraf.txt
+2025-04-01 13:39:04,548 - \U0001f6d1 Backup service stopped manually.
