@@ -1,3 +1,7 @@
+import sys
+
+
+
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from concurrent.futures import ThreadPoolExecutor
@@ -11,6 +15,17 @@ import os
 import shutil
 from datetime import datetime
 import json
+import logging
+
+# Log to console too
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s",
+    handlers=[
+        logging.FileHandler("logs/backup_log.txt"),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 # ===== Utils =====
 def compute_hash(file_path):
@@ -22,8 +37,8 @@ def compute_hash(file_path):
 
 # ===== Version Manager =====
 class VersionManager:
-    def __init__(self):
-        self.version_dir = "versions/"
+    def __init__(self, base_path):
+        self.version_dir = os.path.join(base_path, "versions")
         os.makedirs(self.version_dir, exist_ok=True)
 
     def save_version(self, file_path):
@@ -31,15 +46,35 @@ class VersionManager:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         versioned_file = f"{file_name}_{timestamp}"
         shutil.copy(file_path, os.path.join(self.version_dir, versioned_file))
-        print(f"📄 Version saved: {versioned_file}")
+        logging.info(f"📄 Version saved: {versioned_file}")
 
 # ===== Uploader =====
 class Uploader:
-    def __init__(self):
-        self.gauth = GoogleAuth()
-        self.gauth.LocalWebserverAuth()
-        self.drive = GoogleDrive(self.gauth)
+    def __init__(self, mirror_dir):
+        self.drive = None
         self.folder_cache = {}
+        self.mirror_dir = mirror_dir
+        os.makedirs(self.mirror_dir, exist_ok=True)
+        self.authenticate_drive()
+
+    def authenticate_drive(self):
+        try:
+            self.gauth = GoogleAuth()
+            self.gauth.LoadCredentialsFile("mycreds.txt")
+
+            if self.gauth.credentials is None:
+                self.gauth.LocalWebserverAuth()
+            elif self.gauth.access_token_expired:
+                self.gauth.Refresh()
+            else:
+                self.gauth.Authorize()
+
+            self.gauth.SaveCredentialsFile("mycreds.txt")
+            self.drive = GoogleDrive(self.gauth)
+            logging.info("✅ Google Drive authentication successful.")
+        except Exception as e:
+            self.drive = None
+            logging.error(f"❌ Google Drive authentication failed: {str(e)}")
 
     def get_or_create_folder(self, folder_name, parent_id=None):
         key = (folder_name, parent_id)
@@ -61,7 +96,7 @@ class Uploader:
             })
             folder.Upload()
             folder_id = folder['id']
-            print(f"📁 Created folder: {folder_name}")
+            logging.info(f"📁 Created folder: {folder_name}")
 
         self.folder_cache[key] = folder_id
         return folder_id
@@ -74,8 +109,14 @@ class Uploader:
         return parent_id
 
     def upload_file(self, file_path, relative_path):
+        if not self.drive:
+            logging.error("⚠️ Cannot upload, Google Drive not authenticated.")
+            return
+
         file_name = os.path.basename(file_path)
         parent_id = self.get_drive_path_id(relative_path)
+
+        # Check if file already exists in Drive
         query = f"title='{file_name}' and trashed=false"
         if parent_id:
             query += f" and '{parent_id}' in parents"
@@ -85,7 +126,7 @@ class Uploader:
             file = existing[0]
             file.SetContentFile(file_path)
             file.Upload()
-            print(f"♻️ Updated: {relative_path}")
+            logging.info(f"♻️ Updated in Drive: {relative_path}")
         else:
             file = self.drive.CreateFile({
                 'title': file_name,
@@ -93,7 +134,13 @@ class Uploader:
             })
             file.SetContentFile(file_path)
             file.Upload()
-            print(f"✅ Uploaded: {relative_path}")
+            logging.info(f"✅ Uploaded new to Drive: {relative_path}")
+
+        # === Local Drive Mirror ===
+        mirror_path = os.path.join(self.mirror_dir, relative_path)
+        os.makedirs(os.path.dirname(mirror_path), exist_ok=True)
+        shutil.copy(file_path, mirror_path)
+        logging.info(f"🗂️ Local mirror updated: {mirror_path}")
 
 # ===== Notifier =====
 class Notifier:
@@ -103,16 +150,19 @@ class Notifier:
         self.password = "iqxk gxwu mhlb qiug"
 
     def send(self, message):
-        msg = MIMEText(message)
-        msg['Subject'] = "Backup Notification"
-        msg['From'] = self.sender
-        msg['To'] = self.receiver
+        try:
+            msg = MIMEText(message)
+            msg['Subject'] = "Backup Notification"
+            msg['From'] = self.sender
+            msg['To'] = self.receiver
 
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(self.sender, self.password)
-            server.send_message(msg)
-        print(f"📩 Email sent: {message}")
+            with smtplib.SMTP('smtp.gmail.com', 587) as server:
+                server.starttls()
+                server.login(self.sender, self.password)
+                server.send_message(msg)
+            logging.info(f"📩 Email sent: {message}")
+        except Exception as e:
+            logging.error(f"❌ Email notification failed: {str(e)}")
 
 # ===== File Watcher =====
 class BackupHandler(FileSystemEventHandler):
@@ -122,16 +172,23 @@ class BackupHandler(FileSystemEventHandler):
         self.version_manager = version_manager
         self.hash_store = hash_store
         self.base_path = base_path
+        self.ignore_dirs = ["logs", "versions", "__pycache__", "drive_mirror"]
 
     def process_file(self, full_path):
         rel_path = os.path.relpath(full_path, self.base_path)
+        if any(ignored in rel_path for ignored in self.ignore_dirs):
+            return
+        if not os.path.isfile(full_path):
+            return
+
         current_hash = compute_hash(full_path)
         if self.hash_store.get(full_path) == current_hash:
             return
         self.hash_store[full_path] = current_hash
+
         self.version_manager.save_version(full_path)
         self.uploader.upload_file(full_path, rel_path)
-        self.notifier.send(f"Backup: {rel_path}")
+        self.notifier.send(f"Backup done: {rel_path}")
 
     def on_modified(self, event):
         if not event.is_directory:
@@ -143,9 +200,20 @@ class BackupManager:
         with open('config/config.json') as f:
             config = json.load(f)
         self.watch_path = config['watch_path']
-        self.uploader = Uploader()
+
+        # Setup logs inside watch_path
+        self.log_dir = os.path.join(self.watch_path, "logs")
+        os.makedirs(self.log_dir, exist_ok=True)
+        logging.basicConfig(
+            filename=os.path.join(self.log_dir, "backup_log.txt"),
+            level=logging.INFO,
+            format="%(asctime)s - %(message)s"
+        )
+
+        self.mirror_dir = os.path.join(self.watch_path, "drive_mirror")
+        self.uploader = Uploader(self.mirror_dir)
         self.notifier = Notifier(config['email']['sender'], config['email']['receiver'])
-        self.version_manager = VersionManager()
+        self.version_manager = VersionManager(self.watch_path)
         self.hash_store = {}
 
     def backup_existing_files(self):
@@ -156,7 +224,10 @@ class BackupManager:
                 handler.process_file(full_path)
 
     def start_backup(self):
-        self.backup_existing_files()
+        logging.info("🚀 Starting full backup of existing files...")
+        self.backup_existing_files()  # Full sync first
+
+        logging.info("🔍 Now watching for changes...")
         event_handler = BackupHandler(self.uploader, self.notifier, self.version_manager, self.hash_store, self.watch_path)
         observer = PollingObserver(timeout=10)
         observer.schedule(event_handler, self.watch_path, recursive=True)
