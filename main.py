@@ -1,7 +1,3 @@
-import sys
-
-
-
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from concurrent.futures import ThreadPoolExecutor
@@ -16,16 +12,6 @@ import shutil
 from datetime import datetime
 import json
 import logging
-
-# Log to console too
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(message)s",
-    handlers=[
-        logging.FileHandler("logs/backup_log.txt"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
 
 # ===== Utils =====
 def compute_hash(file_path):
@@ -48,7 +34,7 @@ class VersionManager:
         shutil.copy(file_path, os.path.join(self.version_dir, versioned_file))
         logging.info(f"📄 Version saved: {versioned_file}")
 
-# ===== Uploader =====
+# ===== Uploader/Syncer =====
 class Uploader:
     def __init__(self, mirror_dir):
         self.drive = None
@@ -142,6 +128,25 @@ class Uploader:
         shutil.copy(file_path, mirror_path)
         logging.info(f"🗂️ Local mirror updated: {mirror_path}")
 
+    def download_drive_to_local(self, folder_id=None, local_path=None):
+        """Download files from Drive into local mirror"""
+        if not self.drive:
+            return
+        if folder_id is None:
+            files = self.drive.ListFile({'q': "'root' in parents and trashed=false"}).GetList()
+        else:
+            files = self.drive.ListFile({'q': f"'{folder_id}' in parents and trashed=false"}).GetList()
+
+        for file in files:
+            if file['mimeType'] == 'application/vnd.google-apps.folder':
+                new_local_path = os.path.join(local_path, file['title']) if local_path else os.path.join(self.mirror_dir, file['title'])
+                os.makedirs(new_local_path, exist_ok=True)
+                self.download_drive_to_local(file['id'], new_local_path)
+            else:
+                local_file_path = os.path.join(local_path or self.mirror_dir, file['title'])
+                file.GetContentFile(local_file_path)
+                logging.info(f"⬇️ Downloaded from Drive: {local_file_path}")
+
 # ===== Notifier =====
 class Notifier:
     def __init__(self, sender, receiver):
@@ -223,10 +228,19 @@ class BackupManager:
                 full_path = os.path.join(root, file)
                 handler.process_file(full_path)
 
-    def start_backup(self):
-        logging.info("🚀 Starting full backup of existing files...")
-        self.backup_existing_files()  # Full sync first
+    def sync_drive_to_local(self):
+        logging.info("⬇️ Syncing Google Drive → Local mirror...")
+        self.uploader.download_drive_to_local(local_path=self.mirror_dir)
 
+    def start_backup(self):
+        # 1. Sync Drive to Local Mirror
+        self.sync_drive_to_local()
+
+        # 2. Full backup of local files to Drive
+        logging.info("🚀 Starting full backup of existing local files...")
+        self.backup_existing_files()
+
+        # 3. Watch for changes
         logging.info("🔍 Now watching for changes...")
         event_handler = BackupHandler(self.uploader, self.notifier, self.version_manager, self.hash_store, self.watch_path)
         observer = PollingObserver(timeout=10)
