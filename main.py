@@ -152,7 +152,7 @@ class Notifier:
     def __init__(self, sender, receiver):
         self.sender = sender
         self.receiver = receiver
-        self.password = "iqxk gxwu mhlb qiug"
+        self.password = "Your G-Mail App Password"
 
     def send(self, message):
         try:
