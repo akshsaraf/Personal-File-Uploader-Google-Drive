@@ -1,7 +1,8 @@
 {
-  "watch_path": "C:/Users/Location-to-be-watched",
+  "watch_path": "C:/path/to/watch",
   "email": {
     "sender": "sender_address@email.com",
     "receiver": "receiver_address@email.com"  }
 }
+
 
